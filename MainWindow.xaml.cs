@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => App.ApplyCaptionTheme(this);
         Loaded += (_, _) => Guard(() =>
         {
             if (File.Exists(SettingsFile)) settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(SettingsFile), Json) ?? new();
@@ -138,18 +139,26 @@ public partial class MainWindow : Window
         grid.ColumnDefinitions.Add(new() { Width = new GridLength(index.HasValue ? 52 : 0) });
         grid.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        grid.Children.Add(new TextBlock { Text = index.HasValue ? $"⠿ {index:00}" : "", VerticalAlignment = VerticalAlignment.Center });
+        var number = new TextBlock { Text = index.HasValue ? $"⠿ {index:00}" : "", VerticalAlignment = VerticalAlignment.Center };
+        number.SetResourceReference(StyleProperty, "Secondary");
+        grid.Children.Add(number);
         var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(text, 1);
         grid.Children.Add(text);
         var incompatible = mod is not null && ordering.Incompatible(mod);
         var warning = mod is null ? "模组未安装" : issues is { Count: > 0 } ? issues[0] : null;
-        text.Children.Add(new TextBlock { Text = mod?.Name ?? id, TextTrimming = TextTrimming.CharacterEllipsis,
-            Foreground = warning is not null ? Brushes.Firebrick : incompatible ? Brushes.DarkGoldenrod : Foreground });
+        var label = new TextBlock { Text = mod?.Name ?? id, TextTrimming = TextTrimming.CharacterEllipsis };
+        label.SetResourceReference(TextBlock.ForegroundProperty, warning is not null ? "ErrorText" : incompatible ? "WarningText" : "Text");
+        text.Children.Add(label);
         if (warning is not null || incompatible)
-            text.Children.Add(new TextBlock { Text = string.Join(" · ", new[] { warning, incompatible ? "版本不兼容" : null }.OfType<string>()),
-                Foreground = incompatible ? Brushes.DarkGoldenrod : Brushes.Firebrick, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis });
+        {
+            var message = new TextBlock { Text = string.Join(" · ", new[] { warning, incompatible ? "版本不兼容" : null }.OfType<string>()),
+                FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis };
+            message.SetResourceReference(TextBlock.ForegroundProperty, incompatible ? "WarningText" : "ErrorText");
+            text.Children.Add(message);
+        }
         var kindLabel = new TextBlock { Text = mod?.Kind ?? "", Margin = new Thickness(7, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
+        kindLabel.SetResourceReference(StyleProperty, "Secondary");
         Grid.SetColumn(kindLabel, 2);
         grid.Children.Add(kindLabel);
         return new() { Tag = id, Content = grid, ToolTip = string.Join("\n", new[] { mod?.Name ?? id, warning, incompatible ? "版本不兼容" : null }.OfType<string>()) };
@@ -167,6 +176,7 @@ public partial class MainWindow : Window
     {
         var mod = SelectedMod;
         ModName.Text = mod?.Name ?? (Selection?.Tag as string ?? "请选择模组");
+        ModTile.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
         ModMeta.Text = mod is null ? "" : $"{mod.Id}\n{mod.Source} · {mod.Kind}" +
             (mod.Version.Length == 0 ? "" : $" · v{mod.Version}");
         var description = mod is null ? "" : mod.Description.Length > 0 ? mod.Description : "作者未提供简介。";
@@ -177,7 +187,7 @@ public partial class MainWindow : Window
         WorkshopButton.Visibility = mod?.WorkshopId is null ? Visibility.Collapsed : Visibility.Visible;
         PinButton.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
         KindButton.Visibility = PinButton.Visibility;
-        PinButton.Content = mod is not null && Locked(mod) ? "🔒 解除锁定" : "锁定版本";
+        PinButton.Content = mod is not null && Locked(mod) ? "解除锁定" : "锁定版本";
         PinButton.ToolTip = mod is not null && settings.Locks.TryGetValue(mod.Id.ToLowerInvariant(), out var pinnedVersion) && pinnedVersion.Length > 0
             ? $"锁定时版本 v{pinnedVersion}" : null;
         if (mod is null) { Relations.Text = ""; return; }

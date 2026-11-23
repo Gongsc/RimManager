@@ -19,12 +19,18 @@ public partial class MainWindow
         public Dictionary<string, string> Kinds { get; set; } = new();
     }
 
-    private Window Dialog(string title, double width = 640) => new()
+    private Window Dialog(string title, double width = 640)
     {
-        Title = title, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        Width = width, SizeToContent = SizeToContent.Height, MaxHeight = 560, FontFamily = FontFamily,
-        Background = Background, Foreground = Foreground
-    };
+        var dialog = new Window
+        {
+            Title = title, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Width = width, SizeToContent = SizeToContent.Height, MaxHeight = 560, FontFamily = FontFamily,
+            Background = Background, Foreground = Foreground, FontSize = FontSize, ShowInTaskbar = false,
+            Icon = Icon, UseLayoutRounding = true
+        };
+        dialog.SourceInitialized += (_, _) => App.ApplyCaptionTheme(dialog);
+        return dialog;
+    }
 
     private static DockPanel DialogPanel(Window dialog, out WrapPanel actions)
     {
@@ -44,12 +50,16 @@ public partial class MainWindow
         return button;
     }
 
+    private void UsePrimaryStyle(Button button) => button.Style = (Style)FindResource("PrimaryButton");
+
     private bool ConfirmText(string title, string text, string action, bool allowed)
     {
         var dialog = Dialog(title);
         var panel = DialogPanel(dialog, out var buttons);
         AddAction(buttons, "取消", () => dialog.DialogResult = false).IsCancel = true;
-        AddAction(buttons, action, () => dialog.DialogResult = true).IsEnabled = allowed;
+        var confirm = AddAction(buttons, action, () => dialog.DialogResult = true);
+        confirm.IsEnabled = allowed;
+        UsePrimaryStyle(confirm);
         panel.Children.Add(new ScrollViewer { MaxHeight = 380, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap } });
         return dialog.ShowDialog() == true;
@@ -91,7 +101,7 @@ public partial class MainWindow
         var config = AddField("ModsConfig.xml（留空使用默认位置）", settings.Config, "XML 文件|*.xml");
         var cmd = AddField("SteamCMD.exe（用于下载工坊更新）", settings.SteamCmd, "SteamCMD.exe|steamcmd.exe");
         AddAction(buttons, "取消", () => dialog.DialogResult = false).IsCancel = true;
-        AddAction(buttons, "保存", () =>
+        var save = AddAction(buttons, "保存", () =>
         {
             if (game.Text.Trim().Length > 0 && !ModLibrary.IsGame(game.Text.Trim()))
             {
@@ -104,7 +114,9 @@ public partial class MainWindow
             settings.Config = config.Text.Trim();
             settings.SteamCmd = cmd.Text.Trim();
             dialog.DialogResult = true;
-        }).IsDefault = true;
+        });
+        save.IsDefault = true;
+        UsePrimaryStyle(save);
         if (dialog.ShowDialog() != true) return;
         SaveSettings();
         Reload();
@@ -117,8 +129,15 @@ public partial class MainWindow
         var panel = DialogPanel(dialog, out var buttons);
         var rows = new StackPanel();
         var locked = updates.Count(u => Locked(u.Mod));
-        rows.Children.Add(new TextBlock { Text = $"查到 {updates.Count} 项新版 · 已锁定 {locked} 项 · 状态未知 {unknown} 项",
-            Margin = new Thickness(0, 0, 0, 12) });
+        var heading = new TextBlock { Text = "可更新模组", Margin = new Thickness(0, 0, 0, 5) };
+        heading.SetResourceReference(StyleProperty, "PanelHeading");
+        DockPanel.SetDock(heading, Dock.Top);
+        panel.Children.Add(heading);
+        var summary = new TextBlock { Text = $"查到 {updates.Count} 项新版 · 已锁定 {locked} 项 · 状态未知 {unknown} 项",
+            Margin = new Thickness(0, 0, 0, 12) };
+        summary.SetResourceReference(StyleProperty, "Secondary");
+        DockPanel.SetDock(summary, Dock.Top);
+        panel.Children.Add(summary);
         if (updates.Count == 0) rows.Children.Add(new TextBlock { Text = "未查到可更新的工坊模组。" });
         var boxes = new List<(WorkshopUpdate Update, CheckBox Box)>();
         AddAction(buttons, "关闭", () => dialog.DialogResult = false).IsCancel = true;
@@ -129,23 +148,30 @@ public partial class MainWindow
         }
         var selected = AddAction(buttons, "更新所选", () => Complete(boxes.Where(x => x.Box.IsChecked == true).Select(x => x.Update)));
         selected.IsEnabled = false;
-        AddAction(buttons, "全部更新", () => Complete(updates)).IsEnabled = updates.Count > locked;
+        var all = AddAction(buttons, "全部更新", () => Complete(updates));
+        all.IsEnabled = updates.Count > locked;
+        UsePrimaryStyle(all);
         foreach (var update in updates)
         {
             var mod = update.Mod;
             var pinned = Locked(mod);
             string Date(long time) => DateTimeOffset.FromUnixTimeSeconds(time).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-            var box = new CheckBox
-            {
-                IsEnabled = !pinned,
-                Margin = new Thickness(0, 5, 0, 5),
-                Content = new TextBlock { TextWrapping = TextWrapping.Wrap,
-                    Text = $"{(pinned ? "🔒 已锁定 · " : "")}{mod.Name}\n{(order.Any(id => ordering.Find(id) == mod) ? "已启用" : "未启用")} · 工坊版本 {Date(update.Installed)} → {Date(update.Latest)}" }
-            };
+            var description = new StackPanel();
+            var title = new TextBlock { Text = pinned ? $"🔒 {mod.Name} · 已锁定" : mod.Name,
+                FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            title.SetResourceReference(TextBlock.ForegroundProperty, "Text");
+            var version = new TextBlock { Text = $"{(order.Any(id => ordering.Find(id) == mod) ? "已启用" : "未启用")} · 工坊版本 {Date(update.Installed)} → {Date(update.Latest)}",
+                TextWrapping = TextWrapping.Wrap };
+            version.SetResourceReference(StyleProperty, "Secondary");
+            description.Children.Add(title);
+            description.Children.Add(version);
+            var box = new CheckBox { IsEnabled = !pinned, Content = description, Padding = new Thickness(7, 0, 0, 0) };
             boxes.Add((update, box));
             box.Checked += (_, _) => selected.IsEnabled = true;
             box.Unchecked += (_, _) => selected.IsEnabled = boxes.Any(x => x.Box.IsChecked == true);
-            rows.Children.Add(box);
+            var row = new Border { BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 9, 0, 9), Child = box };
+            row.SetResourceReference(Border.BorderBrushProperty, "Outline");
+            rows.Children.Add(row);
         }
         panel.Children.Add(new ScrollViewer { Content = rows, MaxHeight = 345, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
         dialog.ShowDialog();

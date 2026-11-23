@@ -4,6 +4,6 @@
              xmlns:local="clr-namespace:RimManager"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-
+        <ResourceDictionary Source="Fluent.xaml"/>
     </Application.Resources>
 </Application>

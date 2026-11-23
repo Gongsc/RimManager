@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\RimManager.ico" />
+    <Resource Include="Assets\RimManager.png" />
   </ItemGroup>
 
 </Project>

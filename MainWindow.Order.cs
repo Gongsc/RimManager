@@ -11,8 +11,6 @@ namespace RimManager;
 
 public partial class MainWindow
 {
-    private static readonly Brush PrerequisiteWire = Brushes.Teal;
-    private static readonly Brush DependentWire = Brushes.SaddleBrown;
     private bool wiresQueued;
     private Point dragOrigin;
     private string? dragId;
@@ -52,11 +50,11 @@ public partial class MainWindow
         var dependents = connections.Where(edge => edge.From == selected).Select(edge => edge.To)
             .Where(positions.ContainsKey).Select(mod => positions[mod]).Distinct().ToArray();
         var twoDirections = prerequisites.Length > 0 && dependents.Length > 0;
-        DrawBranch(prerequisites, center - (twoDirections ? 5 : 0), 14, PrerequisiteWire, arrowsAtLeaves: false);
-        DrawBranch(dependents, center + (twoDirections ? 5 : 0), twoDirections ? 30 : 14, DependentWire, arrowsAtLeaves: true);
+        DrawBranch(prerequisites, center - (twoDirections ? 5 : 0), 14, "Accent", arrowsAtLeaves: false);
+        DrawBranch(dependents, center + (twoDirections ? 5 : 0), twoDirections ? 30 : 14, "WarningText", arrowsAtLeaves: true);
     }
 
-    private void DrawBranch(double[] leaves, double center, double lane, Brush color, bool arrowsAtLeaves)
+    private void DrawBranch(double[] leaves, double center, double lane, string brushKey, bool arrowsAtLeaves)
     {
         if (leaves.Length == 0) return;
         var top = Math.Min(center, leaves.Min());
@@ -92,11 +90,13 @@ public partial class MainWindow
             }
         }
         path.Freeze();
-        Wires.Children.Add(new Shape
+        var wire = new Shape
         {
-            Data = path, Stroke = color, StrokeThickness = 1.8, StrokeLineJoin = PenLineJoin.Round,
+            Data = path, StrokeThickness = 1.8, StrokeLineJoin = PenLineJoin.Round,
             StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round
-        });
+        };
+        wire.SetResourceReference(Shape.StrokeProperty, brushKey);
+        Wires.Children.Add(wire);
     }
 
     private ListBoxItem? RowAt(object source) => source is DependencyObject obj
@@ -134,7 +134,7 @@ public partial class MainWindow
         e.Effects = dropRow is null ? DragDropEffects.None : DragDropEffects.Move;
         if (dropRow is null) return;
         var after = e.GetPosition(dropRow).Y >= dropRow.ActualHeight / 2;
-        dropRow.BorderBrush = Brushes.SeaGreen;
+        dropRow.SetResourceReference(BorderBrushProperty, "Accent");
         dropRow.BorderThickness = after ? new Thickness(0, 0, 0, 2) : new Thickness(0, 2, 0, 0);
     }
 
