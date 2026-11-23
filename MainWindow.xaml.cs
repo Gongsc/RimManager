@@ -3,6 +3,8 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Automation;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace RimManager;
@@ -188,6 +190,7 @@ public partial class MainWindow : Window
     private void ShowDetails()
     {
         var mod = SelectedMod;
+        CloseWorkshopMenu(restoreFocus: false);
         ModName.Text = mod?.Name ?? (Selection?.Tag as string ?? "请选择模组");
         ModTile.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
         ModMeta.Text = mod is null ? "" : $"{mod.Id}\n{mod.Source} · {DisplayKind(mod.Kind)}" +
@@ -196,9 +199,14 @@ public partial class MainWindow : Window
         WorkshopButton.Visibility = mod?.WorkshopId is null ? Visibility.Collapsed : Visibility.Visible;
         PinButton.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
         KindButton.Visibility = PinButton.Visibility;
-        PinButton.Content = mod is not null && Locked(mod) ? "解除锁定" : "锁定版本";
-        PinButton.ToolTip = mod is not null && settings.Locks.TryGetValue(mod.Id.ToLowerInvariant(), out var pinnedVersion) && pinnedVersion.Length > 0
-            ? $"锁定时版本 v{pinnedVersion}" : null;
+        var locked = mod is not null && Locked(mod);
+        var pinAction = locked ? "解除锁定" : "锁定版本";
+        PinButton.Content = locked ? "\uE72E" : "\uE785";
+        PinButton.SetResourceReference(BackgroundProperty, locked ? "SelectedSurface" : "ControlSurface");
+        PinButton.SetResourceReference(ForegroundProperty, locked ? "Accent" : "Text");
+        AutomationProperties.SetName(PinButton, pinAction);
+        PinButton.ToolTip = locked && settings.Locks.TryGetValue(mod!.Id.ToLowerInvariant(), out var pinnedVersion) && pinnedVersion.Length > 0
+            ? $"{pinAction} · 锁定时版本 v{pinnedVersion}" : pinAction;
         if (mod is null) { Relations.Text = ""; return; }
         string Names(IEnumerable<string> ids) => string.Join("、", ids.Select(id => ordering.Find(id)?.Name ?? id));
         var issues = ordering.AllIssues(order);
@@ -248,9 +256,46 @@ public partial class MainWindow : Window
 
     private void ShowWorkshopMenu(object sender, RoutedEventArgs e)
     {
-        var menu = WorkshopButton.ContextMenu;
-        menu.PlacementTarget = WorkshopButton;
-        menu.IsOpen = true;
+        WorkshopOverlay.Visibility = Visibility.Visible;
+        WorkshopOverlay.UpdateLayout();
+        PositionWorkshopMenu();
+        WorkshopBrowserOption.Focus();
+    }
+
+    private void PositionWorkshopMenu()
+    {
+        if (WorkshopOverlay.Visibility != Visibility.Visible || !WorkshopButton.IsVisible) return;
+        const double inset = 6;
+        const double gap = 4;
+        var anchor = WorkshopButton.TranslatePoint(new Point(), WorkshopOverlay);
+        var menu = WorkshopFlyout.DesiredSize;
+        var x = anchor.X + WorkshopButton.ActualWidth - menu.Width;
+        var y = anchor.Y + WorkshopButton.ActualHeight + gap;
+        var maxY = Math.Max(inset, WorkshopOverlay.ActualHeight - menu.Height - inset);
+        if (y > maxY) y = anchor.Y - menu.Height - gap;
+        Canvas.SetLeft(WorkshopFlyout, Math.Clamp(x, inset, Math.Max(inset, WorkshopOverlay.ActualWidth - menu.Width - inset)));
+        Canvas.SetTop(WorkshopFlyout, Math.Clamp(y, inset, maxY));
+    }
+
+    private void WorkshopOverlaySizeChanged(object sender, SizeChangedEventArgs e) => PositionWorkshopMenu();
+
+    private void WorkshopOverlayMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource == WorkshopOverlay) CloseWorkshopMenu();
+    }
+
+    private void WorkshopOverlayKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        CloseWorkshopMenu();
+        e.Handled = true;
+    }
+
+    private void CloseWorkshopMenu(bool restoreFocus = true)
+    {
+        if (WorkshopOverlay.Visibility != Visibility.Visible) return;
+        WorkshopOverlay.Visibility = Visibility.Collapsed;
+        if (restoreFocus) WorkshopButton.Focus();
     }
 
     private void OpenWorkshopInBrowser(object sender, RoutedEventArgs e) => OpenWorkshop(inSteam: false);
@@ -259,6 +304,7 @@ public partial class MainWindow : Window
 
     private void OpenWorkshop(bool inSteam) => Guard(() =>
     {
+        CloseWorkshopMenu();
         if (SelectedMod?.WorkshopId is not string id) return;
         var url = inSteam ? $"steam://url/CommunityFilePage/{id}" : $"https://steamcommunity.com/sharedfiles/filedetails/?id={id}";
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();

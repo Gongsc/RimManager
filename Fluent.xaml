@@ -88,44 +88,6 @@
         <Setter Property="Foreground" Value="{DynamicResource SecondaryText}"/>
         <Setter Property="FontSize" Value="12"/>
     </Style>
-    <Style x:Key="WorkshopMenu" TargetType="ContextMenu">
-        <Setter Property="Background" Value="{DynamicResource PanelSurface}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlOutline}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Padding" Value="4"/>
-        <Setter Property="MinWidth" Value="170"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ContextMenu">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"
-                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-    <Style x:Key="WorkshopMenuItem" TargetType="MenuItem">
-        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
-        <Setter Property="Padding" Value="10,7"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="MenuItem">
-                    <Border x:Name="ItemSurface" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource SelectedSurface}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
     <DataTemplate x:Key="ModKindLabel">
         <TextBlock>
             <TextBlock.Style>
@@ -147,12 +109,13 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="9,5"/>
         <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center">
                             <TextBlock x:Name="Glyph" FontFamily="Segoe MDL2 Assets" FontSize="13" Text="{TemplateBinding Tag}"
                                        Margin="0,0,7,0" VerticalAlignment="Center"/>
                             <ContentPresenter RecognizesAccessKey="True" VerticalAlignment="Center"/>
@@ -174,6 +137,21 @@
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource PanelSurface}"/></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="DetailIconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="3,0,0,0"/>
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <Style x:Key="FlyoutButton" TargetType="Button" BasedOn="{StaticResource CommandButton}">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SelectedSurface}"/>
+            </Trigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="CaptionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
