@@ -160,6 +160,7 @@ public partial class MainWindow : Window
         if (rendering || e.AddedItems.Count == 0) return;
         (sender == Active ? Inactive : Active).UnselectAll();
         ShowDetails();
+        QueueWires();
     }
 
     private void ShowDetails()

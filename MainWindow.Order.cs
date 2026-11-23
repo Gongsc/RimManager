@@ -11,7 +11,8 @@ namespace RimManager;
 
 public partial class MainWindow
 {
-    private static readonly Brush[] WireColors = [Brushes.Teal, Brushes.Peru, Brushes.MediumSlateBlue, Brushes.SeaGreen];
+    private static readonly Brush PrerequisiteWire = Brushes.Teal;
+    private static readonly Brush DependentWire = Brushes.SaddleBrown;
     private bool wiresQueued;
     private Point dragOrigin;
     private string? dragId;
@@ -33,38 +34,68 @@ public partial class MainWindow
     private void DrawWires()
     {
         Wires.Children.Clear();
+        if (Active.SelectedItem is not ListBoxItem selectedRow || SelectedMod is not Mod selected) return;
+
+        var connections = ordering.Connections(order)
+            .Where(edge => edge.From == selected || edge.To == selected).Distinct().ToArray();
+        if (connections.Length == 0) return;
+        var related = connections.Select(edge => edge.From == selected ? edge.To : edge.From).ToHashSet();
         var positions = new Dictionary<Mod, double>();
         foreach (ListBoxItem row in Active.Items)
-            if (row.IsArrangeValid && ordering.Find((string)row.Tag) is Mod mod)
+            if (row.IsArrangeValid && ordering.Find((string)row.Tag) is Mod mod && related.Contains(mod))
                 positions[mod] = row.TranslatePoint(new Point(0, row.ActualHeight / 2), Wires).Y;
-        var connections = ordering.Connections(order).Distinct().ToList();
-        var groups = new Dictionary<Mod, int>();
-        var groupIndex = 0;
-        foreach (var (from, to) in connections)
+
+        var center = selectedRow.TranslatePoint(new Point(0, selectedRow.ActualHeight / 2), Wires).Y;
+        var prerequisites = connections.Where(edge => edge.To == selected).Select(edge => edge.From)
+            .Where(positions.ContainsKey).Select(mod => positions[mod]).Distinct().ToArray();
+        var dependents = connections.Where(edge => edge.From == selected).Select(edge => edge.To)
+            .Where(positions.ContainsKey).Select(mod => positions[mod]).Distinct().ToArray();
+        var twoDirections = prerequisites.Length > 0 && dependents.Length > 0;
+        DrawBranch(prerequisites, center - (twoDirections ? 5 : 0), 14, PrerequisiteWire, arrowsAtLeaves: false);
+        DrawBranch(dependents, center + (twoDirections ? 5 : 0), twoDirections ? 30 : 14, DependentWire, arrowsAtLeaves: true);
+    }
+
+    private void DrawBranch(double[] leaves, double center, double lane, Brush color, bool arrowsAtLeaves)
+    {
+        if (leaves.Length == 0) return;
+        var top = Math.Min(center, leaves.Min());
+        var bottom = Math.Max(center, leaves.Max());
+        if (bottom < 0 || top > Wires.ActualHeight) return;
+
+        const double end = 52;
+        var path = new StreamGeometry();
+        using (var ctx = path.Open())
         {
-            var found = groups.TryGetValue(from, out var first);
-            if (!found && !groups.TryGetValue(to, out first)) first = groupIndex++;
-            if (groups.TryGetValue(to, out var second) && second != first)
-                foreach (var key in groups.Where(kv => kv.Value == second).Select(kv => kv.Key).ToArray())
-                    groups[key] = first;
-            groups[from] = groups[to] = first;
-        }
-        var visibleIndex = 0;
-        foreach (var (from, to) in connections)
-        {
-            if (!positions.TryGetValue(from, out var y1) || !positions.TryGetValue(to, out var y2)) continue;
-            var lane = 10 + (visibleIndex++ % 7) * 5;
-            if (Math.Max(y1, y2) < 0 || Math.Min(y1, y2) > Wires.ActualHeight) continue;
-            var geometry = new StreamGeometry();
-            using (var ctx = geometry.Open())
+            void Segment(double x1, double y1, double x2, double y2)
             {
-                ctx.BeginFigure(new Point(52, y1), false, false);
-                ctx.PolyLineTo([new(lane, y1), new(lane, y2), new(52, y2)], true, false);
-                ctx.BeginFigure(new Point(46, y2 - 3), false, false);
-                ctx.PolyLineTo([new(52, y2), new(46, y2 + 3)], true, false);
+                ctx.BeginFigure(new Point(x1, y1), false, false);
+                ctx.LineTo(new Point(x2, y2), true, false);
             }
-            Wires.Children.Add(new Shape { Data = geometry, Stroke = WireColors[groups[from] % WireColors.Length], StrokeThickness = 1.7 });
+            void Arrow(double y)
+            {
+                ctx.BeginFigure(new Point(end - 5, y - 3), false, false);
+                ctx.PolyLineTo([new(end, y), new(end - 5, y + 3)], true, false);
+            }
+            bool Visible(double y) => y >= 0 && y <= Wires.ActualHeight;
+
+            Segment(lane, Math.Max(0, top), lane, Math.Min(Wires.ActualHeight, bottom));
+            if (Visible(center))
+            {
+                Segment(lane, center, end, center);
+                if (!arrowsAtLeaves) Arrow(center);
+            }
+            foreach (var leaf in leaves.Where(Visible))
+            {
+                Segment(lane, leaf, end, leaf);
+                if (arrowsAtLeaves) Arrow(leaf);
+            }
         }
+        path.Freeze();
+        Wires.Children.Add(new Shape
+        {
+            Data = path, Stroke = color, StrokeThickness = 1.8, StrokeLineJoin = PenLineJoin.Round,
+            StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round
+        });
     }
 
     private ListBoxItem? RowAt(object source) => source is DependencyObject obj

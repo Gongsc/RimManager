@@ -43,7 +43,8 @@
     <ListBox x:Name="Inactive" SelectionChanged="ShowSelection" MouseDoubleClick="EnableMod" ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
    </DockPanel>
    <DockPanel Grid.Column="1" Margin="0,0,12,0">
-    <TextBlock DockPanel.Dock="Top" x:Name="ActiveTitle" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8" Text="已启用模组"/>
+     <TextBlock DockPanel.Dock="Top" x:Name="ActiveTitle" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8" Text="已启用模组"
+      ToolTip="选中模组可查看它的直接依赖连线"/>
     <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
      <Button Content="自动排序" Click="AutoSort"/><Button Content="停用所选" Click="DisableMod"/>
      <Button Content="导入排序" Click="ImportOrder"/><Button Content="导出排序" Click="ExportOrder"/>
