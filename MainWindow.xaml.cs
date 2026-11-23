@@ -117,14 +117,14 @@ public partial class MainWindow : Window
         {
             if (Kinds.SelectedItem is string kind && kind != "全部类型" && kind != mod.Kind) continue;
             var search = Search.Text.Trim();
-            if (!mod.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase) && !mod.Id.Contains(search, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!MatchesSearch(mod.Id, mod, search)) continue;
             Inactive.Items.Add(Row(mod.Id, mod, null, null));
         }
+        ApplyActiveSearch();
         var item = Active.Items.Cast<ListBoxItem>().Concat(Inactive.Items.Cast<ListBoxItem>())
-            .FirstOrDefault(row => Ids.Equals((string)row.Tag, selected));
+            .FirstOrDefault(row => row.Visibility == Visibility.Visible && Ids.Equals((string)row.Tag, selected));
         if (item is not null) item.IsSelected = true;
         rendering = false;
-        ActiveTitle.Text = $"已启用模组 · {order.Count}";
         InactiveTitle.Text = $"未启用模组 · {inactive.Count}";
         LaunchButton.Content = dirty ? "应用并启动" : "启动游戏";
         Status.Text = dirty ? "加载顺序有待应用的更改。" : $"已启用 {order.Count} 项 · 未启用 {inactive.Count} 项";
@@ -235,6 +235,37 @@ public partial class MainWindow : Window
     private void FilterInactive(object sender, RoutedEventArgs e)
     {
         if (IsLoaded && library is not null && !rendering) Refresh();
+    }
+
+    private static bool MatchesSearch(string id, Mod? mod, string query) =>
+        id.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || mod is not null && (mod.Id.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || mod.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+
+    private void ApplyActiveSearch()
+    {
+        var query = ActiveSearch.Text.Trim();
+        var matched = 0;
+        foreach (ListBoxItem row in Active.Items)
+        {
+            var id = (string)row.Tag;
+            var visible = MatchesSearch(id, ordering.Find(id), query);
+            row.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            if (visible) matched++;
+        }
+        ActiveTitle.Text = query.Length == 0 ? $"已启用模组 · {order.Count}" : $"已启用模组 · {matched}/{order.Count}";
+    }
+
+    private void FilterActive(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded || library is null || rendering) return;
+        ApplyActiveSearch();
+        if (Active.SelectedItem is ListBoxItem { Visibility: Visibility.Collapsed })
+        {
+            Active.UnselectAll();
+            ShowDetails();
+        }
+        QueueWires();
     }
     private void EnableMod(object sender, RoutedEventArgs e)
     {

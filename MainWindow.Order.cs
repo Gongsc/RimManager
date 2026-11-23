@@ -42,7 +42,8 @@ public partial class MainWindow
         var related = connections.Select(edge => edge.From == selected ? edge.To : edge.From).ToHashSet();
         var positions = new Dictionary<Mod, double>();
         foreach (ListBoxItem row in Active.Items)
-            if (row.IsArrangeValid && ordering.Find((string)row.Tag) is Mod mod && related.Contains(mod))
+            if (row.Visibility == Visibility.Visible && row.IsArrangeValid &&
+                ordering.Find((string)row.Tag) is Mod mod && related.Contains(mod))
                 positions[mod] = row.TranslatePoint(new Point(0, row.ActualHeight / 2), Wires).Y;
 
         var center = selectedRow.TranslatePoint(new Point(0, selectedRow.ActualHeight / 2), Wires).Y;

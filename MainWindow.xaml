@@ -11,6 +11,26 @@
   <Style TargetType="ListBoxItem">
    <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="5,4"/>
   </Style>
+  <Style TargetType="GridSplitter">
+   <Setter Property="HorizontalAlignment" Value="Stretch"/>
+   <Setter Property="VerticalAlignment" Value="Stretch"/>
+   <Setter Property="ResizeDirection" Value="Columns"/>
+   <Setter Property="ResizeBehavior" Value="PreviousAndNext"/>
+   <Setter Property="Cursor" Value="SizeWE"/>
+   <Setter Property="Template">
+    <Setter.Value>
+     <ControlTemplate TargetType="GridSplitter">
+      <Border Background="Transparent">
+       <Border x:Name="Grip" HorizontalAlignment="Center" Width="1" Background="#CED8CF"/>
+      </Border>
+      <ControlTemplate.Triggers>
+       <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="#335448"/></Trigger>
+       <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Grip" Property="Background" Value="#335448"/></Trigger>
+      </ControlTemplate.Triggers>
+     </ControlTemplate>
+    </Setter.Value>
+   </Setter>
+  </Style>
  </Window.Resources>
  <DockPanel x:Name="Shell">
   <Border DockPanel.Dock="Top" Background="#243C35" Padding="16,12">
@@ -34,17 +54,26 @@
   </Border>
   <TextBlock DockPanel.Dock="Bottom" x:Name="Status" Padding="12,7" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
   <Grid Margin="12">
-   <Grid.ColumnDefinitions><ColumnDefinition Width="23*"/><ColumnDefinition Width="47*"/><ColumnDefinition Width="30*"/></Grid.ColumnDefinitions>
-   <DockPanel Margin="0,0,12,0">
+   <Grid.ColumnDefinitions>
+    <ColumnDefinition Width="23*" MinWidth="165"/>
+    <ColumnDefinition Width="10"/>
+    <ColumnDefinition Width="47*" MinWidth="290"/>
+    <ColumnDefinition Width="10"/>
+    <ColumnDefinition Width="30*" MinWidth="210"/>
+   </Grid.ColumnDefinitions>
+   <DockPanel>
     <TextBlock DockPanel.Dock="Top" x:Name="InactiveTitle" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8" Text="未启用模组"/>
     <TextBox DockPanel.Dock="Top" x:Name="Search" Margin="0,0,0,6" AutomationProperties.Name="搜索未启用模组" ToolTip="按名称或包标识搜索" TextChanged="FilterInactive"/>
     <ComboBox DockPanel.Dock="Top" x:Name="Kinds" Margin="0,0,0,8" AutomationProperties.Name="未启用模组类型" SelectionChanged="FilterInactive"/>
     <Button DockPanel.Dock="Bottom" Content="启用所选" Margin="0,8,0,0" Click="EnableMod"/>
     <ListBox x:Name="Inactive" SelectionChanged="ShowSelection" MouseDoubleClick="EnableMod" ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
    </DockPanel>
-   <DockPanel Grid.Column="1" Margin="0,0,12,0">
+   <GridSplitter Grid.Column="1" AutomationProperties.Name="调整未启用和已启用列表宽度"/>
+   <DockPanel Grid.Column="2">
      <TextBlock DockPanel.Dock="Top" x:Name="ActiveTitle" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8" Text="已启用模组"
       ToolTip="选中模组可查看它的直接依赖连线"/>
+    <TextBox DockPanel.Dock="Top" x:Name="ActiveSearch" Margin="0,0,0,8" AutomationProperties.Name="搜索已启用模组"
+     ToolTip="按名称或包标识搜索" TextChanged="FilterActive"/>
     <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
      <Button Content="自动排序" Click="AutoSort"/><Button Content="停用所选" Click="DisableMod"/>
      <Button Content="导入排序" Click="ImportOrder"/><Button Content="导出排序" Click="ExportOrder"/>
@@ -56,7 +85,8 @@
      <Canvas x:Name="Wires" Width="54" HorizontalAlignment="Left" IsHitTestVisible="False"/>
     </Grid>
    </DockPanel>
-   <Border Grid.Column="2" Background="#EAF0E7" Padding="14">
+   <GridSplitter Grid.Column="3" AutomationProperties.Name="调整已启用列表和模组介绍宽度"/>
+   <Border Grid.Column="4" Background="#EAF0E7" Padding="14">
     <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
      <TextBlock Text="模组介绍" FontWeight="SemiBold" FontSize="17"/>
      <TextBlock x:Name="ModName" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,12,0,4"/>
