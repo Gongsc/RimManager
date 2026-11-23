@@ -47,6 +47,16 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "RimManager", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
 
+    private void MinimizeWindow(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    private void ToggleMaximize(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized) SystemCommands.RestoreWindow(this);
+        else SystemCommands.MaximizeWindow(this);
+    }
+
+    private void CloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
+
     private bool CanDiscard() => !dirty || MessageBox.Show(this, "放弃尚未应用的加载顺序？", "RimManager",
         MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
@@ -133,6 +143,8 @@ public partial class MainWindow : Window
         QueueWires();
     }
 
+    private static string DisplayKind(string kind) => kind == "未分类" ? "-" : kind;
+
     private ListBoxItem Row(string id, Mod? mod, int? index, List<string>? issues)
     {
         var grid = new Grid { MinHeight = 32 };
@@ -157,7 +169,7 @@ public partial class MainWindow : Window
             message.SetResourceReference(TextBlock.ForegroundProperty, incompatible ? "WarningText" : "ErrorText");
             text.Children.Add(message);
         }
-        var kindLabel = new TextBlock { Text = mod?.Kind ?? "", Margin = new Thickness(7, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
+        var kindLabel = new TextBlock { Text = mod is null ? "" : DisplayKind(mod.Kind), Margin = new Thickness(7, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
         kindLabel.SetResourceReference(StyleProperty, "Secondary");
         Grid.SetColumn(kindLabel, 2);
         grid.Children.Add(kindLabel);
@@ -177,7 +189,7 @@ public partial class MainWindow : Window
         var mod = SelectedMod;
         ModName.Text = mod?.Name ?? (Selection?.Tag as string ?? "请选择模组");
         ModTile.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
-        ModMeta.Text = mod is null ? "" : $"{mod.Id}\n{mod.Source} · {mod.Kind}" +
+        ModMeta.Text = mod is null ? "" : $"{mod.Id}\n{mod.Source} · {DisplayKind(mod.Kind)}" +
             (mod.Version.Length == 0 ? "" : $" · v{mod.Version}");
         var description = mod is null ? "" : mod.Description.Length > 0 ? mod.Description : "作者未提供简介。";
         ModSummary.Text = description.Length <= 220 ? description : description[..220] + "…";
@@ -213,7 +225,8 @@ public partial class MainWindow : Window
         var dialog = Dialog("修改模组类型", 320);
         var panel = DialogPanel(dialog, out var actions);
         string[] kinds = ["本体", "DLC", "框架", "内容", "功能", "汉化", "兼容补丁", "未分类"];
-        var choice = new System.Windows.Controls.ComboBox { ItemsSource = kinds, SelectedItem = mod.Kind };
+        var choice = new System.Windows.Controls.ComboBox { ItemsSource = kinds, SelectedItem = mod.Kind,
+            ItemTemplate = (DataTemplate)FindResource("ModKindLabel") };
         panel.Children.Add(choice);
         AddAction(actions, "取消", () => dialog.DialogResult = false).IsCancel = true;
         AddAction(actions, "保存", () => dialog.DialogResult = true).IsDefault = true;

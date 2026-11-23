@@ -7,18 +7,43 @@
         Foreground="{DynamicResource Text}" FontFamily="Segoe UI, Microsoft YaHei UI" FontSize="13"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="34" GlassFrameThickness="0,42,0,0" UseAeroCaptionButtons="True"/>
+        <shell:WindowChrome CaptionHeight="34" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
-    <DockPanel x:Name="Shell">
-        <Border x:Name="TitleBar" DockPanel.Dock="Top" Height="42" Padding="14,0,150,0"
+    <DockPanel>
+        <Border x:Name="TitleBar" DockPanel.Dock="Top" Height="42" Padding="14,0,0,0"
                 Background="{DynamicResource WindowSurface}">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Image Source="Assets/RimManager.png" Width="20" Height="20" Margin="0,0,9,0"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
-                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
-                           FontWeight="SemiBold" VerticalAlignment="Center"/>
-            </StackPanel>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Content="&#xE921;"
+                            AutomationProperties.Name="最小化" ToolTip="最小化" Click="MinimizeWindow"/>
+                    <Button x:Name="MaximizeButton" Click="ToggleMaximize">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+                                <Setter Property="Content" Value="&#xE922;"/>
+                                <Setter Property="AutomationProperties.Name" Value="最大化"/>
+                                <Setter Property="ToolTip" Value="最大化"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                        <Setter Property="Content" Value="&#xE923;"/>
+                                        <Setter Property="AutomationProperties.Name" Value="还原"/>
+                                        <Setter Property="ToolTip" Value="还原"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="CloseButton" Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;"
+                            AutomationProperties.Name="关闭" ToolTip="关闭" Click="CloseWindow"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="Assets/RimManager.png" Width="20" Height="20" Margin="0,0,9,0"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
         </Border>
+        <DockPanel x:Name="Shell">
         <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Outline}" BorderThickness="0,0,0,1" Padding="12,8">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -63,7 +88,8 @@
                         <TextBlock x:Name="InactiveTitle" Style="{StaticResource PanelHeading}" Text="未启用模组"/>
                         <TextBox x:Name="Search" Tag="搜索未启用模组" Margin="0,8,0,6" AutomationProperties.Name="搜索未启用模组"
                                  ToolTip="按名称或包标识搜索" TextChanged="FilterInactive"/>
-                        <ComboBox x:Name="Kinds" AutomationProperties.Name="未启用模组类型" SelectionChanged="FilterInactive"/>
+                        <ComboBox x:Name="Kinds" ItemTemplate="{StaticResource ModKindLabel}"
+                                  AutomationProperties.Name="未启用模组类型" SelectionChanged="FilterInactive"/>
                     </StackPanel>
                     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Outline}" BorderThickness="0,1,0,1" Padding="12,6">
                         <DockPanel>
@@ -144,5 +170,6 @@
                 </DockPanel>
             </Border>
         </Grid>
+        </DockPanel>
     </DockPanel>
 </Window>
