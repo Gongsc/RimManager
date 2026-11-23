@@ -138,8 +138,26 @@
             <GridSplitter Grid.Column="3" AutomationProperties.Name="调整已启用列表和模组介绍宽度"/>
             <Border Grid.Column="4" Style="{StaticResource Panel}" Padding="12,10,10,10">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="模组介绍" Style="{StaticResource PanelHeading}" Margin="0,0,0,12"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="模组介绍" Style="{StaticResource PanelHeading}" VerticalAlignment="Top" Margin="0,4,6,0"/>
+                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
+                            <Button x:Name="PinButton" Click="ToggleLock" Margin="2,0,0,3" Padding="6,3"/>
+                            <Button x:Name="WorkshopButton" Content="创意工坊 ▾" Click="ShowWorkshopMenu" Margin="2,0,0,3" Padding="6,3">
+                                <Button.ContextMenu>
+                                    <ContextMenu Placement="Bottom" Style="{StaticResource WorkshopMenu}">
+                                        <MenuItem Header="用浏览器打开" Style="{StaticResource WorkshopMenuItem}" Click="OpenWorkshopInBrowser"/>
+                                        <MenuItem Header="用 Steam 客户端打开" Style="{StaticResource WorkshopMenuItem}" Click="OpenWorkshopInSteam"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                            <Button x:Name="KindButton" Content="修改类型" Click="ChangeKind" Margin="2,0,0,3" Padding="6,3"/>
+                        </WrapPanel>
+                    </Grid>
+                    <ScrollViewer x:Name="ModDetailsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel Margin="0,0,4,0">
                             <DockPanel>
                                 <Border x:Name="ModTile" DockPanel.Dock="Left" Width="40" Height="40" CornerRadius="8"
@@ -152,13 +170,36 @@
                                     <TextBlock x:Name="ModMeta" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
-                            <TextBlock x:Name="ModSummary" TextWrapping="Wrap" Margin="0,12,0,6"/>
-                            <Expander x:Name="More" Header="展开简介"><TextBlock x:Name="FullSummary" TextWrapping="Wrap"/></Expander>
-                            <WrapPanel Margin="0,7,0,0">
-                                <Button x:Name="PinButton" Tag="&#xE72E;" Click="ToggleLock" Margin="0,2,5,2"/>
-                                <Button x:Name="WorkshopButton" Content="创意工坊 ↗" Click="OpenWorkshop" Margin="0,2,5,2"/>
-                                <Button x:Name="KindButton" Content="修改类型" Click="ChangeKind" Margin="0,2,0,2"/>
-                            </WrapPanel>
+                            <Border x:Name="CoverFrame" Visibility="Collapsed" Margin="0,12,0,0"
+                                    CornerRadius="6" BorderThickness="1" BorderBrush="{DynamicResource Outline}">
+                                <Image x:Name="ModCover" Stretch="Uniform" MaxHeight="210"
+                                       AutomationProperties.Name="模组封面"/>
+                            </Border>
+                            <Border x:Name="DescriptionSection" Style="{StaticResource DescriptionSection}" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="简介" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                    <TextBlock x:Name="ModSummary">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource DescriptionText}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsExpanded, ElementName=More}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <Expander x:Name="More" Header="简介正文" Style="{StaticResource DescriptionExpander}">
+                                        <TextBlock x:Name="FullSummary" Style="{StaticResource DescriptionText}"/>
+                                    </Expander>
+                                </StackPanel>
+                            </Border>
+                            <Border x:Name="DescriptionImageSection" Style="{StaticResource DescriptionSection}" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="简介图片" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                    <StackPanel x:Name="DescriptionImages"/>
+                                </StackPanel>
+                            </Border>
                             <Border BorderBrush="{DynamicResource Outline}" BorderThickness="0,1,0,0" Margin="0,13,0,0" Padding="0,11,0,0">
                                 <StackPanel>
                                     <TextBlock Text="依赖关系" FontWeight="SemiBold" Margin="0,0,0,4"/>

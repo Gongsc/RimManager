@@ -3,6 +3,7 @@
                     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework">
     <SolidColorBrush x:Key="WindowSurface" Color="#EEF2F3"/>
     <SolidColorBrush x:Key="PanelSurface" Color="#FCFDFD"/>
+    <SolidColorBrush x:Key="DescriptionSurface" Color="#F4F7F6"/>
     <SolidColorBrush x:Key="ControlSurface" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="Outline" Color="#DCE3E5"/>
     <SolidColorBrush x:Key="ControlOutline" Color="#C6D1D4"/>
@@ -27,9 +28,103 @@
         <Setter Property="FontSize" Value="17"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
+    <Style x:Key="DescriptionSection" TargetType="Border" BasedOn="{StaticResource Panel}">
+        <Setter Property="Background" Value="{DynamicResource DescriptionSurface}"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Margin" Value="0,10,0,0"/>
+        <Setter Property="Padding" Value="11,9"/>
+    </Style>
+    <Style x:Key="DescriptionText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="21"/>
+    </Style>
+    <Style x:Key="DescriptionExpander" TargetType="Expander">
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <StackPanel>
+                        <ToggleButton x:Name="HeaderSite" HorizontalAlignment="Left" Foreground="{DynamicResource Accent}"
+                                      AutomationProperties.Name="展开简介"
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="ToggleSurface" Background="Transparent" CornerRadius="4" Padding="5,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock x:Name="Chevron" Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="ToggleLabel" Text="展开简介" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Chevron" Property="Text" Value="&#xE70E;"/>
+                                            <Setter TargetName="ToggleLabel" Property="Text" Value="收起简介"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ToggleSurface" Property="Background" Value="{DynamicResource HoverSurface}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="ToggleSurface" Property="Background" Value="{DynamicResource SelectedSurface}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter x:Name="ExpandSite" Margin="0,5,0,0" Visibility="Collapsed"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="HeaderSite" Property="AutomationProperties.Name" Value="收起简介"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style x:Key="Secondary" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource SecondaryText}"/>
         <Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style x:Key="WorkshopMenu" TargetType="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource PanelSurface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlOutline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="MinWidth" Value="170"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"
+                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="WorkshopMenuItem" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="ItemSurface" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource SelectedSurface}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <DataTemplate x:Key="ModKindLabel">
         <TextBlock>

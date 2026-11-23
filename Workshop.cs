@@ -7,10 +7,35 @@ using System.Text.RegularExpressions;
 namespace RimManager;
 
 internal sealed record WorkshopUpdate(Mod Mod, long Installed, long Latest);
+internal sealed record WorkshopPresentation(string Description, string Cover);
 
 internal static class Workshop
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(25) };
+
+    private static async Task<JsonDocument> GetDetails(IReadOnlyList<string> ids, CancellationToken cancellationToken = default)
+    {
+        var fields = new List<KeyValuePair<string, string>> { new("itemcount", ids.Count.ToString()) };
+        fields.AddRange(ids.Select((id, index) => new KeyValuePair<string, string>($"publishedfileids[{index}]", id)));
+        using var content = new FormUrlEncodedContent(fields);
+        using var response = await Http.PostAsync("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/", content, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+    }
+
+    internal static async Task<WorkshopPresentation?> GetPresentation(string id, CancellationToken cancellationToken)
+    {
+        using var json = await GetDetails([id], cancellationToken);
+        foreach (var item in json.RootElement.GetProperty("response").GetProperty("publishedfiledetails").EnumerateArray())
+        {
+            if (item.GetProperty("result").GetInt32() != 1 ||
+                item.GetProperty("consumer_app_id").GetInt32() != int.Parse(ModLibrary.AppId)) continue;
+            string Read(string key) => item.TryGetProperty(key, out var value) ? value.GetString() ?? "" : "";
+            return new(Read("description"), Read("preview_url"));
+        }
+        return null;
+    }
 
     internal static async Task<(List<WorkshopUpdate> Updates, int Unknown)> Check(
         IEnumerable<Mod> mods, IReadOnlyDictionary<string, long> revisions)
@@ -21,12 +46,7 @@ internal static class Workshop
         var unknown = 0;
         foreach (var batch in items.Chunk(50))
         {
-            var fields = new List<KeyValuePair<string, string>> { new("itemcount", batch.Length.ToString()) };
-            fields.AddRange(batch.Select((m, i) => new KeyValuePair<string, string>($"publishedfileids[{i}]", m.WorkshopId!)));
-            using var content = new FormUrlEncodedContent(fields);
-            using var response = await Http.PostAsync("https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/", content);
-            response.EnsureSuccessStatusCode();
-            using var json = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+            using var json = await GetDetails(batch.Select(m => m.WorkshopId!).ToArray());
             var remote = json.RootElement.GetProperty("response").GetProperty("publishedfiledetails")
                 .EnumerateArray().Where(x => x.GetProperty("result").GetInt32() == 1)
                 .ToDictionary(x => x.GetProperty("publishedfileid").GetString()!, x => x.GetProperty("time_updated").GetInt64());

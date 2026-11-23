@@ -25,7 +25,7 @@ public partial class App : Application
     {
         if (SystemParameters.HighContrast)
         {
-            foreach (var key in new[] { "WindowSurface", "PanelSurface", "ControlSurface", "HoverSurface", "SelectedSurface" })
+            foreach (var key in new[] { "WindowSurface", "PanelSurface", "DescriptionSurface", "ControlSurface", "HoverSurface", "SelectedSurface" })
                 Resources[key] = SystemColors.WindowBrush;
             foreach (var key in new[] { "Text", "SecondaryText", "Outline", "ControlOutline", "Accent", "WarningText", "ErrorText" })
                 Resources[key] = SystemColors.WindowTextBrush;
@@ -39,7 +39,7 @@ public partial class App : Application
             darkTheme = true;
             var colors = new Dictionary<string, string>
             {
-                ["WindowSurface"] = "#202629", ["PanelSurface"] = "#2B3033", ["ControlSurface"] = "#33393C",
+                ["WindowSurface"] = "#202629", ["PanelSurface"] = "#2B3033", ["DescriptionSurface"] = "#252B2E", ["ControlSurface"] = "#33393C",
                 ["Outline"] = "#484F52", ["ControlOutline"] = "#657074", ["Text"] = "#F0F4F4",
                 ["SecondaryText"] = "#B7C3C7", ["SelectedSurface"] = "#26433C", ["HoverSurface"] = "#36413E",
                 ["Accent"] = "#8BDAC5", ["PrimarySurface"] = "#92E1CC", ["PrimaryHover"] = "#B3EBDC",

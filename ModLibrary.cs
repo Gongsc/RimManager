@@ -121,7 +121,9 @@ internal sealed class ModLibrary(string game, string steam, string config)
             : Regex.IsMatch(name, "compatibility|兼容补丁", RegexOptions.IgnoreCase) ? "兼容补丁"
             : Regex.IsMatch(name, "library|framework|harmony|框架", RegexOptions.IgnoreCase) ? "框架"
             : Directory.Exists(Path.Combine(path, "Defs")) ? "内容" : "未分类";
-        return new(id, name, path, source, Get("description"), Get("modVersion"), kind, workshopId, manifest,
+        var description = (xml.Element("descriptionsByVersion")?.Element("v" + gameVersion) ?? xml.Element("description"))
+            ?.Nodes().Select(node => node is XText text ? text.Value : node.ToString(SaveOptions.DisableFormatting));
+        return new(id, name, path, source, string.Concat(description ?? []).Trim(), Get("modVersion"), kind, workshopId, manifest,
             Values(Entries("supportedVersions")), Entries("modDependencies").Select(e =>
                 Values(e.Elements("packageId").Concat(e.Element("alternativePackageIds")?.Elements() ?? [])))
                 .Where(items => items.Length > 0).ToArray(),

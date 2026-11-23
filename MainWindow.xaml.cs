@@ -39,6 +39,7 @@ public partial class MainWindow : Window
             if (!Shell.IsEnabled || !CanDiscard()) e.Cancel = true;
             else Guard(SaveSettings);
         };
+        Closed += (_, _) => descriptionRequest?.Cancel();
     }
 
     private void Guard(Action action)
@@ -191,11 +192,7 @@ public partial class MainWindow : Window
         ModTile.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
         ModMeta.Text = mod is null ? "" : $"{mod.Id}\n{mod.Source} · {DisplayKind(mod.Kind)}" +
             (mod.Version.Length == 0 ? "" : $" · v{mod.Version}");
-        var description = mod is null ? "" : mod.Description.Length > 0 ? mod.Description : "作者未提供简介。";
-        ModSummary.Text = description.Length <= 220 ? description : description[..220] + "…";
-        FullSummary.Text = description;
-        More.Visibility = description.Length > 220 ? Visibility.Visible : Visibility.Collapsed;
-        More.IsExpanded = false;
+        ShowModPresentation(mod);
         WorkshopButton.Visibility = mod?.WorkshopId is null ? Visibility.Collapsed : Visibility.Visible;
         PinButton.Visibility = mod is null ? Visibility.Collapsed : Visibility.Visible;
         KindButton.Visibility = PinButton.Visibility;
@@ -249,10 +246,22 @@ public partial class MainWindow : Window
         ShowDetails();
     });
 
-    private void OpenWorkshop(object sender, RoutedEventArgs e) => Guard(() =>
+    private void ShowWorkshopMenu(object sender, RoutedEventArgs e)
     {
-        if (SelectedMod?.WorkshopId is string id)
-            Process.Start(new ProcessStartInfo($"https://steamcommunity.com/sharedfiles/filedetails/?id={id}") { UseShellExecute = true })?.Dispose();
+        var menu = WorkshopButton.ContextMenu;
+        menu.PlacementTarget = WorkshopButton;
+        menu.IsOpen = true;
+    }
+
+    private void OpenWorkshopInBrowser(object sender, RoutedEventArgs e) => OpenWorkshop(inSteam: false);
+
+    private void OpenWorkshopInSteam(object sender, RoutedEventArgs e) => OpenWorkshop(inSteam: true);
+
+    private void OpenWorkshop(bool inSteam) => Guard(() =>
+    {
+        if (SelectedMod?.WorkshopId is not string id) return;
+        var url = inSteam ? $"steam://url/CommunityFilePage/{id}" : $"https://steamcommunity.com/sharedfiles/filedetails/?id={id}";
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
     });
 
     private void FilterInactive(object sender, RoutedEventArgs e)
