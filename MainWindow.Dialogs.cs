@@ -184,8 +184,7 @@ public partial class MainWindow
         Shell.IsEnabled = false;
         try
         {
-            Status.Text = "正在查询 Steam 创意工坊…";
-            var (updates, unknown) = await Workshop.Check(mods, settings.Revisions);
+            var (updates, unknown) = await CheckWorkshopWithProgress();
             var chosen = ChooseUpdates(updates, unknown);
             if (chosen.Count == 0) { Status.Text = "更新检查完成。"; return; }
             var cmd = settings.SteamCmd;
@@ -224,5 +223,33 @@ public partial class MainWindow
             MessageBox.Show(this, ex.Message, "模组更新", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally { Shell.IsEnabled = true; }
+    }
+
+    private async Task<(List<WorkshopUpdate> Updates, int Unknown)> CheckWorkshopWithProgress()
+    {
+        Status.Visibility = Visibility.Collapsed;
+        WorkshopCheckLabel.Text = "正在准备检查模组更新…";
+        WorkshopCheckBar.Value = 0;
+        WorkshopCheckBar.IsIndeterminate = true;
+        WorkshopCheckIndicator.Visibility = Visibility.Visible;
+        var progress = new Progress<WorkshopCheckProgress>(value =>
+        {
+            if (WorkshopCheckIndicator.Visibility != Visibility.Visible) return;
+            WorkshopCheckBar.Maximum = Math.Max(1, value.Total);
+            WorkshopCheckBar.Value = value.Completed;
+            WorkshopCheckBar.IsIndeterminate = value.Completed == 0 && value.Total > 0;
+            WorkshopCheckLabel.Text = value.Total == 0 ? "没有可检查的工坊模组。"
+                : $"检查模组更新 · {value.Completed} / {value.Total}";
+        });
+        try
+        {
+            return await Task.Run(() => Workshop.Check(mods, settings.Revisions, progress));
+        }
+        finally
+        {
+            WorkshopCheckIndicator.Visibility = Visibility.Collapsed;
+            WorkshopCheckBar.IsIndeterminate = false;
+            Status.Visibility = Visibility.Visible;
+        }
     }
 }

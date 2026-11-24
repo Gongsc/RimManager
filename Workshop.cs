@@ -8,6 +8,7 @@ namespace RimManager;
 
 internal sealed record WorkshopUpdate(Mod Mod, long Installed, long Latest);
 internal sealed record WorkshopPresentation(string Description, string Cover);
+internal readonly record struct WorkshopCheckProgress(int Completed, int Total);
 
 internal static class Workshop
 {
@@ -38,12 +39,14 @@ internal static class Workshop
     }
 
     internal static async Task<(List<WorkshopUpdate> Updates, int Unknown)> Check(
-        IEnumerable<Mod> mods, IReadOnlyDictionary<string, long> revisions)
+        IEnumerable<Mod> mods, IReadOnlyDictionary<string, long> revisions, IProgress<WorkshopCheckProgress> progress)
     {
         var items = mods.Where(m => m.Manifest is not null && m.WorkshopId is not null).ToList();
         var manifests = new Dictionary<string, string>(ModLibrary.Ids);
         var updates = new List<WorkshopUpdate>();
         var unknown = 0;
+        var completed = 0;
+        progress.Report(new(completed, items.Count));
         foreach (var batch in items.Chunk(50))
         {
             using var json = await GetDetails(batch.Select(m => m.WorkshopId!).ToArray());
@@ -58,6 +61,8 @@ internal static class Workshop
                 if (!remote.TryGetValue(mod.WorkshopId!, out var latest) || installed == 0) { unknown++; continue; }
                 if (latest > installed) updates.Add(new(mod, installed, latest));
             }
+            completed += batch.Length;
+            progress.Report(new(completed, items.Count));
         }
         return (updates, unknown);
     }

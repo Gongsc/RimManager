@@ -68,6 +68,13 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="Status" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
                            TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                <StackPanel x:Name="WorkshopCheckIndicator" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock x:Name="WorkshopCheckLabel" Style="{StaticResource Secondary}" TextWrapping="Wrap"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <ProgressBar x:Name="WorkshopCheckBar" Height="5" Margin="0,4,0,0" BorderThickness="0"
+                                 Foreground="{DynamicResource Accent}" Background="{DynamicResource Outline}"
+                                 AutomationProperties.Name="模组更新检查进度"/>
+                </StackPanel>
                 <Label Grid.Column="1" Content="Steam 启动参数" Foreground="{DynamicResource SecondaryText}" Target="{Binding ElementName=Arguments}" VerticalAlignment="Center"/>
                 <TextBox x:Name="Arguments" Grid.Column="2" Tag="可留空" Margin="4,0,8,0"/>
                 <Button Grid.Column="3" Content="应用配置" Margin="0,0,8,0" Click="ApplyClick"/>
