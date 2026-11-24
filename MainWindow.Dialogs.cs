@@ -19,11 +19,11 @@ public partial class MainWindow
         public Dictionary<string, string> Kinds { get; set; } = new();
     }
 
-    private Window Dialog(string title, double width = 640)
+    private Window Dialog(string title, double width = 640, Window? owner = null)
     {
         var dialog = new Window
         {
-            Title = title, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Title = title, Owner = owner ?? this, WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Width = width, SizeToContent = SizeToContent.Height, MaxHeight = 560, FontFamily = FontFamily,
             Background = Background, Foreground = Foreground, FontSize = FontSize, ShowInTaskbar = false,
             Icon = Icon, UseLayoutRounding = true
@@ -51,6 +51,24 @@ public partial class MainWindow
     }
 
     private void UsePrimaryStyle(Button button) => button.Style = (Style)FindResource("PrimaryButton");
+
+    private bool CanDiscard(Window? owner = null)
+    {
+        if (!dirty) return true;
+        var dialog = Dialog("加载顺序", 360, owner);
+        dialog.ResizeMode = ResizeMode.NoResize;
+        var panel = DialogPanel(dialog, out var buttons);
+        var question = new TextBlock { Text = "放弃尚未应用的加载顺序？", TextWrapping = TextWrapping.Wrap };
+        question.SetResourceReference(StyleProperty, "PanelHeading");
+        panel.Children.Add(question);
+        AddAction(buttons, "放弃更改", () => dialog.DialogResult = true);
+        var keep = AddAction(buttons, "继续编辑", () => dialog.DialogResult = false);
+        keep.IsDefault = true;
+        keep.IsCancel = true;
+        UsePrimaryStyle(keep);
+        dialog.Loaded += (_, _) => keep.Focus();
+        return dialog.ShowDialog() == true;
+    }
 
     private bool ConfirmText(string title, string text, string action, bool allowed)
     {
@@ -108,7 +126,7 @@ public partial class MainWindow
                 MessageBox.Show(dialog, "所选目录中找不到 RimWorldWin64.exe。");
                 return;
             }
-            if (!CanDiscard()) return;
+            if (!CanDiscard(dialog)) return;
             settings.Game = game.Text.Trim();
             settings.Steam = steam.Text.Trim();
             settings.Config = config.Text.Trim();

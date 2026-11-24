@@ -63,9 +63,6 @@ public partial class MainWindow : Window
 
     private void CloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
 
-    private bool CanDiscard() => !dirty || MessageBox.Show(this, "放弃尚未应用的加载顺序？", "RimManager",
-        MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
-
     private void SaveSettings()
     {
         settings.Arguments = Arguments.Text;
