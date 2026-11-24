@@ -9,7 +9,10 @@ namespace RimManager;
 internal sealed record Mod(string Id, string Name, string Path, string Source, string Description,
     string Version, string Kind, string? WorkshopId, string? Manifest, string[] Supported,
     string[][] Dependencies, string[] Before, string[] After, string[] ForceBefore,
-    string[] ForceAfter, string[] Conflicts);
+    string[] ForceAfter, string[] Conflicts)
+{
+    internal string IconPath { get; init; } = "";
+}
 
 internal sealed class ModLibrary(string game, string steam, string config)
 {
@@ -128,7 +131,7 @@ internal sealed class ModLibrary(string game, string steam, string config)
                 Values(e.Elements("packageId").Concat(e.Element("alternativePackageIds")?.Elements() ?? [])))
                 .Where(items => items.Length > 0).ToArray(),
             Values(Entries("loadBefore")), Values(Entries("loadAfter")), Values(Entries("forceLoadBefore")),
-            Values(Entries("forceLoadAfter")), Values(Entries("incompatibleWith")));
+            Values(Entries("forceLoadAfter")), Values(Entries("incompatibleWith"))) { IconPath = Get("modIconPath") };
     }
 
     internal List<string> ReadOrder()

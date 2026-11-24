@@ -210,6 +210,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="Text" Value=""><Setter TargetName="Hint" Property="Visibility" Value="Visible"/></Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Hint" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Frame" Property="Opacity" Value=".5"/></Trigger>

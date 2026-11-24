@@ -2,10 +2,26 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="RimManager v0.1.0" Width="1160" Height="720" MinWidth="960" MinHeight="560"
+        Title="RimManager" Width="1160" Height="720" MinWidth="960" MinHeight="560"
         Icon="Assets/RimManager.ico" Background="{DynamicResource WindowSurface}"
         Foreground="{DynamicResource Text}" FontFamily="Segoe UI, Microsoft YaHei UI" FontSize="13"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+    <Window.Resources>
+        <Style x:Key="ClearSearchButton" TargetType="Button" BasedOn="{StaticResource DetailIconButton}">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Margin" Value="0,2,2,2"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Content" Value="&#xE711;"/>
+            <Setter Property="ToolTip" Value="清除搜索"/>
+            <Setter Property="AutomationProperties.Name" Value="清除搜索"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Text}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="34" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
@@ -94,8 +110,11 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="12,10,12,8">
                         <TextBlock x:Name="InactiveTitle" Style="{StaticResource PanelHeading}" Text="未启用模组"/>
-                        <TextBox x:Name="Search" Tag="搜索未启用模组" Margin="0,8,0,6" AutomationProperties.Name="搜索未启用模组"
-                                 ToolTip="按名称或包标识搜索" TextChanged="FilterInactive"/>
+                        <Grid Margin="0,8,0,6">
+                            <TextBox x:Name="Search" Tag="搜索未启用模组" Padding="8,4,32,4" AutomationProperties.Name="搜索未启用模组"
+                                     ToolTip="按名称或包标识搜索" TextChanged="FilterInactive"/>
+                            <Button Style="{StaticResource ClearSearchButton}" DataContext="{Binding ElementName=Search}" Click="ClearSearch"/>
+                        </Grid>
                         <ComboBox x:Name="Kinds" ItemTemplate="{StaticResource ModKindLabel}"
                                   AutomationProperties.Name="未启用模组类型" SelectionChanged="FilterInactive"/>
                     </StackPanel>
@@ -118,8 +137,11 @@
                     <StackPanel DockPanel.Dock="Top" Margin="12,10,12,8">
                         <TextBlock x:Name="ActiveTitle" Style="{StaticResource PanelHeading}" Text="已启用模组"
                                    ToolTip="选中模组可查看它的直接依赖连线"/>
-                        <TextBox x:Name="ActiveSearch" Tag="搜索已启用模组" Margin="0,8,0,0"
-                                 AutomationProperties.Name="搜索已启用模组" ToolTip="按名称或包标识搜索" TextChanged="FilterActive"/>
+                        <Grid Margin="0,8,0,0">
+                            <TextBox x:Name="ActiveSearch" Tag="搜索已启用模组" Padding="8,4,32,4"
+                                     AutomationProperties.Name="搜索已启用模组" ToolTip="按名称或包标识搜索" TextChanged="FilterActive"/>
+                            <Button Style="{StaticResource ClearSearchButton}" DataContext="{Binding ElementName=ActiveSearch}" Click="ClearSearch"/>
+                        </Grid>
                     </StackPanel>
                     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Outline}" BorderThickness="0,1,0,1" Padding="62,6,12,6">
                         <DockPanel>

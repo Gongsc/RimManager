@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace RimManager;
 
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
     private Settings settings = new();
     private ModLibrary? library;
+    private readonly Dictionary<string, Task<BitmapSource?>> listIcons = new(Ids);
     private List<Mod> mods = [];
     private List<string> order = [];
     private ModOrdering ordering = new([], "");
@@ -27,6 +29,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title = $"RimManager v{typeof(MainWindow).Assembly.GetName().Version!.ToString(3)}";
         SourceInitialized += (_, _) => App.ApplyCaptionTheme(this);
         Loaded += (_, _) => Guard(() =>
         {
@@ -91,6 +94,7 @@ public partial class MainWindow : Window
         var nextMods = nextLibrary.Scan();
         var nextOrder = nextLibrary.ReadOrder();
         library = nextLibrary;
+        listIcons.Clear();
         mods = ApplyKinds(nextMods);
         ordering = new(mods, library.Version);
         order = nextOrder;
@@ -146,19 +150,40 @@ public partial class MainWindow : Window
         QueueWires();
     }
 
+    private void ClearSearch(object sender, RoutedEventArgs e)
+    {
+        var search = (TextBox)((Button)sender).DataContext;
+        search.Clear();
+        search.Focus();
+    }
+
     private static string DisplayKind(string kind) => kind == "未分类" ? "-" : kind;
 
     private ListBoxItem Row(string id, Mod? mod, int? index, List<string>? issues)
     {
         var grid = new Grid { MinHeight = 32 };
         grid.ColumnDefinitions.Add(new() { Width = new GridLength(index.HasValue ? 52 : 0) });
+        grid.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var number = new TextBlock { Text = index.HasValue ? $"⠿ {index:00}" : "", VerticalAlignment = VerticalAlignment.Center };
         number.SetResourceReference(StyleProperty, "Secondary");
         grid.Children.Add(number);
+        if (mod is not null)
+        {
+            var icon = new Image { Width = 24, Height = 24, Margin = new Thickness(0, 0, 6, 0), Stretch = Stretch.Uniform };
+            icon.Loaded += async (_, _) =>
+            {
+                if (!listIcons.TryGetValue(mod.Path, out var pending))
+                    listIcons[mod.Path] = pending = ModImages.LoadIcon(mod);
+                icon.Source = await pending;
+                if (icon.Source is null) icon.Visibility = Visibility.Collapsed;
+            };
+            Grid.SetColumn(icon, 1);
+            grid.Children.Add(icon);
+        }
         var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(text, 1);
+        Grid.SetColumn(text, 2);
         grid.Children.Add(text);
         var incompatible = mod is not null && ordering.Incompatible(mod);
         var warning = mod is null ? "模组未安装" : issues is { Count: > 0 } ? issues[0] : null;
@@ -174,7 +199,7 @@ public partial class MainWindow : Window
         }
         var kindLabel = new TextBlock { Text = mod is null ? "" : DisplayKind(mod.Kind), Margin = new Thickness(7, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center };
         kindLabel.SetResourceReference(StyleProperty, "Secondary");
-        Grid.SetColumn(kindLabel, 2);
+        Grid.SetColumn(kindLabel, 3);
         grid.Children.Add(kindLabel);
         return new() { Tag = id, Content = grid, ToolTip = string.Join("\n", new[] { mod?.Name ?? id, warning, incompatible ? "版本不兼容" : null }.OfType<string>()) };
     }

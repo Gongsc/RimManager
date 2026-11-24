@@ -14,7 +14,20 @@ internal static class ModImages
         "raw.githubusercontent.com", "user-images.githubusercontent.com"
     ];
 
-    internal static async Task<BitmapSource?> Load(Mod mod, string reference, CancellationToken cancellationToken)
+    internal static async Task<BitmapSource?> LoadIcon(Mod mod)
+    {
+        if (mod.IconPath.Length > 0)
+        {
+            var texture = "Textures/" + mod.IconPath;
+            if (!Path.HasExtension(texture)) texture += ".png";
+            if (await Load(mod, texture, CancellationToken.None, 48).ConfigureAwait(false) is { } icon) return icon;
+        }
+        foreach (var file in new[] { "ModIcon.png", "Icon.png", "Preview.png", "Preview.jpg", "Preview.jpeg", "Preview.gif" })
+            if (await Load(mod, "About/" + file, CancellationToken.None, 48).ConfigureAwait(false) is { } image) return image;
+        return null;
+    }
+
+    internal static async Task<BitmapSource?> Load(Mod mod, string reference, CancellationToken cancellationToken, int width = 960)
     {
         try
         {
@@ -59,13 +72,14 @@ internal static class ModImages
                         !File.Exists(file) || new FileInfo(file).Length > MaxBytes) continue;
                     if (HasReparsePoint(file, root)) continue;
                     using var stream = File.OpenRead(file);
-                    return Decode(stream);
+                    return Decode(stream, width);
                 }
                 return null;
             }, cancellationToken);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or HttpRequestException
-            or FormatException or ArgumentException or NotSupportedException or InvalidOperationException or OperationCanceledException)
+            or FormatException or ArgumentException or NotSupportedException or InvalidOperationException or OperationCanceledException
+            or System.Runtime.InteropServices.COMException)
         {
             return null;
         }
@@ -82,12 +96,12 @@ internal static class ModImages
         return false;
     }
 
-    private static BitmapSource Decode(Stream stream)
+    private static BitmapSource Decode(Stream stream, int width = 960)
     {
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.DecodePixelWidth = 960;
+        bitmap.DecodePixelWidth = width;
         bitmap.StreamSource = stream;
         bitmap.EndInit();
         bitmap.Freeze();

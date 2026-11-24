@@ -1,6 +1,6 @@
 # RimManager
 
-RimManager 是面向 Steam 版 RimWorld 的 Windows 模组管理器和启动器。当前版本为 v0.1.0。
+RimManager 是面向 Steam 版 RimWorld 的 Windows 模组管理器和启动器。当前版本为 v0.1.1。
 
 ## 使用
 
@@ -26,7 +26,7 @@ dotnet build -c Release -warnaserror
 dotnet publish -c Release -r win-x64 --self-contained true -o artifacts/app
 ```
 
-GitHub Actions 在提交和拉取请求中构建并打包 Windows x64 产物。推送与项目版本一致的 `v*` 标签后，工作流使用 [v0.1.0 发布说明](release-notes/v0.1.0.md) 对应的同名说明文件创建 Release 并上传 ZIP。
+GitHub Actions 在提交和拉取请求中构建并打包 Windows x64 产物。推送与项目版本一致的 `v*` 标签后，工作流使用同名说明文件创建 Release 并上传 ZIP。最新变更见 [v0.1.1 发布说明](release-notes/v0.1.1.md)。
 
 ## 许可证
 
