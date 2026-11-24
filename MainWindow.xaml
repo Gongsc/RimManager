@@ -127,8 +127,10 @@
                     <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Outline}" BorderThickness="0,1,0,0" Padding="10,8">
                         <Button Content="启用所选" Tag="&#xE710;" HorizontalAlignment="Left" Click="EnableMod"/>
                     </Border>
-                    <ListBox x:Name="Inactive" Padding="5,4,0,4" SelectionChanged="ShowSelection"
-                             MouseDoubleClick="EnableMod" ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                    <ListBox x:Name="Inactive" Padding="5,4,0,4" SelectionMode="Extended" AllowDrop="True" SelectionChanged="ShowSelection"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             PreviewMouseLeftButtonDown="DragStart" PreviewMouseLeftButtonUp="FinishClick" PreviewMouseMove="DragMove"
+                             DragOver="DragOverRow" Drop="DropRow" DragLeave="LeaveRow"/>
                 </DockPanel>
             </Border>
             <GridSplitter Grid.Column="1" AutomationProperties.Name="调整未启用和已启用列表宽度"/>
@@ -158,9 +160,10 @@
                         </WrapPanel>
                     </Border>
                     <Grid ClipToBounds="True">
-                        <ListBox x:Name="Active" Padding="53,4,0,4" AllowDrop="True" SelectionChanged="ShowSelection"
+                        <ListBox x:Name="Active" Padding="53,4,0,4" SelectionMode="Extended" AllowDrop="True" SelectionChanged="ShowSelection"
                                  ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 PreviewMouseLeftButtonDown="DragStart" PreviewMouseMove="DragMove" DragOver="DragOverRow" Drop="DropRow" DragLeave="LeaveRow"/>
+                                 PreviewMouseLeftButtonDown="DragStart" PreviewMouseLeftButtonUp="FinishClick" PreviewMouseMove="DragMove"
+                                 DragOver="DragOverRow" Drop="DropRow" DragLeave="LeaveRow"/>
                         <Canvas x:Name="Wires" Width="54" HorizontalAlignment="Left" IsHitTestVisible="False"/>
                     </Grid>
                 </DockPanel>

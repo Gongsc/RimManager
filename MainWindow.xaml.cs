@@ -101,7 +101,7 @@ public partial class MainWindow : Window
         dirty = false;
         GameLabel.Text = library.Version.Length == 0 ? "RimWorld" : $"RimWorld {library.Version}";
         UpdateKinds();
-        Refresh(order.FirstOrDefault());
+        Refresh(order.Take(1), Active);
         if (library.Messages.Count > 0)
             MessageBox.Show(this, string.Join("\n", library.Messages.Take(20)), "扫描提示");
     }
@@ -116,9 +116,13 @@ public partial class MainWindow : Window
         rendering = false;
     }
 
-    private void Refresh(string? selected = null)
+    private static string[] SelectedIds(ListBox list) => list.Items.Cast<ListBoxItem>()
+        .Where(row => row.IsSelected && row.Visibility == Visibility.Visible).Select(row => (string)row.Tag).ToArray();
+
+    private void Refresh(IEnumerable<string>? selected = null, ListBox? destination = null)
     {
-        selected ??= Selection?.Tag as string;
+        destination ??= Active.SelectedItems.Count > 0 ? Active : Inactive;
+        var selectedIds = (selected ?? SelectedIds(destination)).ToHashSet(Ids);
         rendering = true;
         Active.Items.Clear();
         Inactive.Items.Clear();
@@ -139,9 +143,8 @@ public partial class MainWindow : Window
             Inactive.Items.Add(Row(mod.Id, mod, null, null));
         }
         ApplyActiveSearch();
-        var item = Active.Items.Cast<ListBoxItem>().Concat(Inactive.Items.Cast<ListBoxItem>())
-            .FirstOrDefault(row => row.Visibility == Visibility.Visible && Ids.Equals((string)row.Tag, selected));
-        if (item is not null) item.IsSelected = true;
+        foreach (ListBoxItem row in destination.Items)
+            if (row.Visibility == Visibility.Visible && selectedIds.Contains((string)row.Tag)) row.IsSelected = true;
         rendering = false;
         InactiveTitle.Text = $"未启用模组 · {inactive.Count}";
         LaunchButton.Content = dirty ? "应用并启动" : "启动游戏";
@@ -206,8 +209,8 @@ public partial class MainWindow : Window
 
     private void ShowSelection(object sender, SelectionChangedEventArgs e)
     {
-        if (rendering || e.AddedItems.Count == 0) return;
-        (sender == Active ? Inactive : Active).UnselectAll();
+        if (rendering) return;
+        if (e.AddedItems.Count > 0) (sender == Active ? Inactive : Active).UnselectAll();
         ShowDetails();
         QueueWires();
     }
@@ -363,33 +366,45 @@ public partial class MainWindow : Window
     {
         if (!IsLoaded || library is null || rendering) return;
         ApplyActiveSearch();
-        if (Active.SelectedItem is ListBoxItem { Visibility: Visibility.Collapsed })
-        {
-            Active.UnselectAll();
-            ShowDetails();
-        }
+        foreach (var row in Active.SelectedItems.Cast<ListBoxItem>().Where(row => row.Visibility == Visibility.Collapsed).ToArray())
+            row.IsSelected = false;
         QueueWires();
     }
-    private void EnableMod(object sender, RoutedEventArgs e)
+    private void EnableMod(object sender, RoutedEventArgs e) => PlaceInOrder(SelectedIds(Inactive), order.Count);
+    private void DisableMod(object sender, RoutedEventArgs e) => DisableMods(SelectedIds(Active));
+
+    private void PlaceInOrder(string[] ids, int insertion)
     {
-        if (Inactive.SelectedItem is not ListBoxItem row) return;
-        var id = (string)row.Tag;
-        order.Add(id);
-        MarkChanged(id);
+        var moving = ids.ToHashSet(Ids);
+        var next = order.Where(id => !moving.Contains(id)).ToList();
+        next.InsertRange(order.Take(insertion).Count(id => !moving.Contains(id)), ids);
+        if (order.SequenceEqual(next, Ids)) return;
+        order = next;
+        MarkChanged(ids, Active);
     }
-    private void DisableMod(object sender, RoutedEventArgs e)
+
+    private void DisableMods(string[] ids)
     {
-        if (Active.SelectedItem is not ListBoxItem row) return;
-        var id = (string)row.Tag;
-        if (Ids.Equals(ordering.Find(id)?.Id, "ludeon.rimworld")) { Status.Text = "Core 是游戏本体。"; return; }
-        var affected = ordering.Connections(order).Where(x => Ids.Equals(x.From.Id, ordering.Find(id)?.Id))
-            .Select(x => x.To.Name).Distinct().ToList();
-        if (affected.Count > 0 && MessageBox.Show(this, "以下已启用模组依赖此项。\n" + string.Join("、", affected) +
+        var removing = ids.ToHashSet(Ids);
+        var skippedCore = removing.RemoveWhere(id => Ids.Equals(ordering.Find(id)?.Id ?? id, "ludeon.rimworld")) > 0;
+        if (removing.Count == 0)
+        {
+            if (skippedCore) Status.Text = "Core 是游戏本体。";
+            return;
+        }
+        var remaining = order.Where(id => !removing.Contains(id)).ToList();
+        var activeIds = order.Select(ordering.Find).OfType<Mod>().Select(m => m.Id).ToHashSet(Ids);
+        var remainingMods = remaining.Select(ordering.Find).OfType<Mod>().ToList();
+        var remainingIds = remainingMods.Select(m => m.Id).ToHashSet(Ids);
+        var affected = remainingMods.Where(m => m.Dependencies.Any(options =>
+            options.Any(activeIds.Contains) && !options.Any(remainingIds.Contains))).Select(m => m.Name).Distinct().ToList();
+        if (affected.Count > 0 && MessageBox.Show(this, "停用后，以下已启用模组将缺少前置。\n" + string.Join("、", affected) +
             "\n继续停用？", "停用模组", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-        order.Remove(id);
-        MarkChanged(id);
+        order = remaining;
+        MarkChanged(removing.Select(id => ordering.Find(id)?.Id ?? id), Inactive);
+        if (skippedCore) Status.Text = "已停用所选模组，Core 保持启用。";
     }
-    private void MarkChanged(string? id = null) { dirty = true; Refresh(id); }
+    private void MarkChanged(IEnumerable<string>? ids = null, ListBox? destination = null) { dirty = true; Refresh(ids, destination); }
     private void ScanAgain(object sender, RoutedEventArgs e) => Guard(() => { if (CanDiscard()) Reload(); });
     private void RestoreBackup(object sender, RoutedEventArgs e) => Guard(() =>
     {

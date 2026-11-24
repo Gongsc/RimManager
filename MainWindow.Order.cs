@@ -13,9 +13,12 @@ public partial class MainWindow
 {
     private bool wiresQueued;
     private Point dragOrigin;
-    private string? dragId;
+    private ListBoxItem? pressedRow;
+    private bool deferredClick;
+    private sealed record ModDrag(ListBox Source, string[] Ids);
+    private const string ModDragFormat = "RimManager.ModSelection";
+    private ModDrag? currentDrag;
     private ListBoxItem? dropRow;
-    private ScrollViewer? activeScroll;
     private long lastDragScroll;
 
     private void QueueWires()
@@ -99,21 +102,60 @@ public partial class MainWindow
         Wires.Children.Add(wire);
     }
 
-    private ListBoxItem? RowAt(object source) => source is DependencyObject obj
-        ? ItemsControl.ContainerFromElement(Active, obj) as ListBoxItem : null;
+    private static ListBoxItem? RowAt(ListBox list, object source) => source is DependencyObject obj
+        ? ItemsControl.ContainerFromElement(list, obj) as ListBoxItem : null;
     private void DragStart(object sender, MouseButtonEventArgs e)
     {
-        dragOrigin = e.GetPosition(Active);
-        dragId = RowAt(e.OriginalSource)?.Tag as string;
+        var list = (ListBox)sender;
+        dragOrigin = e.GetPosition(list);
+        pressedRow = RowAt(list, e.OriginalSource);
+        deferredClick = false;
+        if (pressedRow is null || Keyboard.Modifiers != ModifierKeys.None) return;
+        if (e.ClickCount == 2)
+        {
+            var id = (string)pressedRow.Tag;
+            pressedRow = null;
+            e.Handled = true;
+            if (list == Active) DisableMods([id]);
+            else PlaceInOrder([id], order.Count);
+        }
+        else if (pressedRow.IsSelected && list.SelectedItems.Count > 1)
+        {
+            // Keep the group selected until the gesture resolves to a click or drag.
+            deferredClick = true;
+            list.CaptureMouse();
+            e.Handled = true;
+        }
+    }
+
+    private void FinishClick(object sender, MouseButtonEventArgs e)
+    {
+        var list = (ListBox)sender;
+        if (deferredClick && pressedRow is not null)
+        {
+            list.ReleaseMouseCapture();
+            list.UnselectAll();
+            list.SelectedItem = pressedRow;
+            pressedRow.Focus();
+            e.Handled = true;
+        }
+        deferredClick = false;
+        pressedRow = null;
     }
     private void DragMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || dragId is not string id) return;
-        var delta = e.GetPosition(Active) - dragOrigin;
+        var list = (ListBox)sender;
+        if (e.LeftButton != MouseButtonState.Pressed || pressedRow is not { IsSelected: true } row ||
+            ItemsControl.ItemsControlFromItemContainer(row) != list) return;
+        var delta = e.GetPosition(list) - dragOrigin;
         if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
             Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance) return;
-        try { DragDrop.DoDragDrop(Active, new DataObject("RimManager.OrderRow", id), DragDropEffects.Move); }
-        finally { dragId = null; ClearDrop(); }
+        pressedRow = null;
+        deferredClick = false;
+        if (list.IsMouseCaptured) list.ReleaseMouseCapture();
+        currentDrag = new(list, SelectedIds(list));
+        try { DragDrop.DoDragDrop(list, new DataObject(ModDragFormat, true), DragDropEffects.Move); }
+        finally { currentDrag = null; ClearDrop(); }
     }
 
     private void ClearDrop()
@@ -126,12 +168,15 @@ public partial class MainWindow
 
     private void DragOverRow(object sender, DragEventArgs e)
     {
-        if (dragId is null || !e.Data.GetDataPresent("RimManager.OrderRow")) return;
+        var list = (ListBox)sender;
         ClearDrop();
         e.Handled = true;
-        ScrollDuringDrag(e.GetPosition(Active).Y);
-        dropRow = RowAt(e.OriginalSource);
-        e.Effects = dropRow is null ? DragDropEffects.None : DragDropEffects.Move;
+        e.Effects = DragDropEffects.None;
+        if (!CanDrop(list, e)) return;
+        e.Effects = DragDropEffects.Move;
+        ScrollDuringDrag(list, e.GetPosition(list).Y);
+        if (list != Active) return;
+        dropRow = RowAt(list, e.OriginalSource);
         if (dropRow is null) return;
         var after = e.GetPosition(dropRow).Y >= dropRow.ActualHeight / 2;
         dropRow.SetResourceReference(BorderBrushProperty, "Accent");
@@ -140,40 +185,38 @@ public partial class MainWindow
 
     private void LeaveRow(object sender, DragEventArgs e) => ClearDrop();
 
-    private void ScrollDuringDrag(double y)
+    private bool CanDrop(ListBox list, DragEventArgs e) => currentDrag is not null &&
+        (list == Active || currentDrag.Source == Active) && e.Data.GetDataPresent(ModDragFormat);
+
+    private void ScrollDuringDrag(ListBox list, double y)
     {
         var now = Environment.TickCount64;
-        if (now - lastDragScroll < 100 || (y > 24 && y < Active.ActualHeight - 24)) return;
-        activeScroll ??= Active.Template.FindName("PART_ScrollViewer", Active) as ScrollViewer
-            ?? FindScrollViewer(Active);
-        if (activeScroll is null) return;
+        if (now - lastDragScroll < 100 || (y > 24 && y < list.ActualHeight - 24)) return;
+        if (list.Template.FindName("PART_ScrollViewer", list) is not ScrollViewer scroll) return;
         lastDragScroll = now;
-        activeScroll.ScrollToVerticalOffset(activeScroll.VerticalOffset + (y <= 24 ? -36 : 36));
+        if (y <= 24) scroll.LineUp(); else scroll.LineDown();
     }
 
-    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is ScrollViewer viewer) return viewer;
-            if (FindScrollViewer(child) is { } nested) return nested;
-        }
-        return null;
-    }
     private void DropRow(object sender, DragEventArgs e)
     {
-        if (dragId is not string id || !e.Data.GetDataPresent("RimManager.OrderRow") ||
-            RowAt(e.OriginalSource) is not ListBoxItem row || Ids.Equals(id, (string)row.Tag)) return;
+        var list = (ListBox)sender;
         e.Handled = true;
-        var next = order.Where(item => !Ids.Equals(item, id)).ToList();
-        var index = next.FindIndex(item => Ids.Equals(item, (string)row.Tag));
-        next.Insert(index + (e.GetPosition(row).Y >= row.ActualHeight / 2 ? 1 : 0), id);
         ClearDrop();
-        if (order.SequenceEqual(next, Ids)) return;
-        order = next;
-        MarkChanged(id);
-        Active.ScrollIntoView(Active.SelectedItem);
+        e.Effects = DragDropEffects.None;
+        if (!CanDrop(list, e) || currentDrag is not { } drag) return;
+        e.Effects = DragDropEffects.Move;
+        if (list == Inactive) DisableMods(drag.Ids);
+        else
+        {
+            var insertion = order.Count;
+            if (RowAt(list, e.OriginalSource) is { } row)
+            {
+                if (drag.Source == list && row.IsSelected) return;
+                insertion = list.Items.IndexOf(row) + (e.GetPosition(row).Y >= row.ActualHeight / 2 ? 1 : 0);
+            }
+            PlaceInOrder(drag.Ids, insertion);
+        }
+        if (list.SelectedItem is { } selected) list.ScrollIntoView(selected);
     }
 
     private void AutoSort(object sender, RoutedEventArgs e) => Guard(() =>
